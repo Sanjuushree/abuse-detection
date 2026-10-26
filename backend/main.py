@@ -73,8 +73,17 @@ app.include_router(reports.router)
 app.include_router(health.router)
 app.include_router(demo.router)
 
+from fastapi import Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+DIST_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend", "dist")
+
 @app.get("/", tags=["Root"])
-def root():
+def root(request: Request):
+    accept = request.headers.get("accept", "")
+    if os.path.exists(DIST_DIR) and "text/html" in accept:
+        return FileResponse(os.path.join(DIST_DIR, "index.html"))
     return {
         "name": "API Sentinel",
         "tagline": "Detect. Analyze. Protect.",
@@ -83,3 +92,15 @@ def root():
         "documentation": "/docs",
         "health_check": "/api/health"
     }
+
+if os.path.exists(DIST_DIR):
+    assets_dir = os.path.join(DIST_DIR, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa(full_path: str):
+        file_path = os.path.join(DIST_DIR, full_path)
+        if full_path and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(DIST_DIR, "index.html"))

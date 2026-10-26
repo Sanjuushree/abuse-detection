@@ -11,9 +11,13 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         start_time = time.perf_counter()
         
-        # Skip logging for preflight OPTIONS requests, docs, and openapi schema to keep analytics clean
+        # Skip logging for preflight OPTIONS requests, docs, static assets, and openapi schema to keep analytics clean
         path = request.url.path
-        if request.method == "OPTIONS" or path in ("/docs", "/redoc", "/openapi.json", "/favicon.ico"):
+        if (
+            request.method == "OPTIONS"
+            or path in ("/docs", "/redoc", "/openapi.json", "/favicon.ico", "/favicon.svg", "/icons.svg", "/index.html")
+            or path.startswith(("/assets", "/static"))
+        ):
             return await call_next(request)
 
         # Extract client IP safely
